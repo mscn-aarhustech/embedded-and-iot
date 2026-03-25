@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>micro:bit Compass</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --border: rgba(255,255,255,0.07);
+    --accent: #c8a96e;
+    --accent-dim: rgba(200,169,110,0.15);
+    --accent-glow: rgba(200,169,110,0.08);
+    --text: #e8e2d6;
+    --muted: rgba(232,226,214,0.4);
+    --danger: #e05a5a;
+    --success: #5ab87c;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Cormorant Garamond', serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+    overflow-x: hidden;
+  }
+
+  /* subtle grid bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; width: 100%; max-width: 700px; }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+  }
+  .title { font-family: var(--serif); font-weight: 300; font-size: 1.6rem; letter-spacing: 0.03em; color: var(--text); }
+  .title span { color: var(--accent); }
+  .status-row { display: flex; align-items: center; gap: 8px; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #444; transition: background 0.4s; }
+  .dot.live { background: var(--success); box-shadow: 0 0 6px var(--success); animation: pulse 2s infinite; }
+  .dot.error { background: var(--danger); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* Connect button */
+  #connect-btn {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 2rem;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  #connect-btn:hover { background: var(--accent-dim); }
+  #connect-btn:disabled { border-color: #333; color: #444; cursor: not-allowed; }
+
+  /* Main compass area */
+  .compass-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  /* The compass rose SVG */
+  .compass-container {
+    position: relative;
+    width: 280px;
+    height: 280px;
+  }
+
+  .compass-ring {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: radial-gradient(circle at 50% 50%, rgba(200,169,110,0.04) 0%, transparent 70%);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .compass-ring::before {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(200,169,110,0.15);
+  }
+
+  /* tick marks drawn via SVG */
+  #compass-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* needle */
+  .needle-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .needle {
+    width: 2px;
+    height: 90px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .needle-north {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 52px solid var(--accent);
+    filter: drop-shadow(0 0 6px rgba(200,169,110,0.6));
+  }
+  .needle-south {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 38px solid rgba(200,169,110,0.25);
+  }
+  .needle-center {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px rgba(200,169,110,0.8);
+  }
+
+  /* heading display */
+  .heading-display {
+    text-align: center;
+  }
+  .heading-number {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: 5rem;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .heading-deg { color: var(--accent); font-size: 2.5rem; }
+  .heading-cardinal {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.4rem;
+  }
+  .heading-cardinal span { color: var(--accent); font-size: 0.85rem; }
+
+  /* stats row */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-label { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .stat-value { font-size: 1.1rem; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
+
+  /* history chart */
+  .chart-section { margin-bottom: 2rem; }
+  .section-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .chart-wrap { position: relative; height: 120px; width: 100%; }
+  #history-canvas { width: 100% !important; height: 100% !important; }
+
+  /* log */
+  #log {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.75rem;
+    height: 100px;
+    overflow-y: auto;
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
+  }
+  .log-entry { padding: 1px 0; }
+  .log-entry .ts { color: #444; margin-right: 8px; }
+  .log-entry .val { color: var(--accent); }
+
+  .hint {
+    margin-top: 1.5rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: #383838;
+    line-height: 1.8;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+  .hint code { color: #555; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="title">micro<span>:</span>bit <span>Compass</span></div>
+    <div class="status-row">
+      <div class="dot" id="dot"></div>
+      <span id="status-text">disconnected</span>
+    </div>
+  </header>
+
+  <button id="connect-btn">⊕ Connect to micro:bit</button>
+
+  <div class="compass-area">
+    <div class="compass-container">
+      <div class="compass-ring">
+        <svg id="compass-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="needle-wrap" id="needle-wrap">
+          <div class="needle">
+            <div class="needle-north"></div>
+            <div class="needle-south"></div>
+          </div>
+          <div class="needle-center"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="heading-display">
+      <div class="heading-number" id="heading-number">—<span class="heading-deg"></span></div>
+      <div class="heading-cardinal" id="heading-cardinal">awaiting signal</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Min</div>
+      <div class="stat-value" id="stat-min">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Max</div>
+      <div class="stat-value" id="stat-max">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Samples</div>
+      <div class="stat-value" id="stat-count">0</div>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <div class="section-label">Heading history</div>
+    <div class="chart-wrap"><canvas id="history-canvas"></canvas></div>
+  </div>
+
+  <div class="section-label">Raw stream</div>
+  <div id="log"><span style="color:#333">— no data —</span></div>
+
+  <div class="hint">
+    Runs in Chrome / Edge only &nbsp;·&nbsp; Requires <code>https://</code> or <code>localhost</code><br>
+    micro:bit sends heading via <code>print(stable_heading)</code> at 115200 baud
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── Draw compass ticks & cardinal labels ──────────────────────────────────
+(function drawCompassFace() {
+  const svg = document.getElementById('compass-svg');
+  const cx = 140, cy = 140, outerR = 126, innerR = 118, majorR = 110;
+  const cardinals = ['N','NE','E','SE','S','SW','W','NW'];
+
+  for (let i = 0; i < 72; i++) {
+    const angle = (i * 5) * Math.PI / 180;
+    const isMajor = i % 9 === 0;   // every 45°
+    const isMid   = i % 3 === 0;   // every 15°
+    const r1 = outerR;
+    const r2 = isMajor ? majorR : isMid ? innerR - 4 : innerR;
+    const x1 = cx + r1 * Math.sin(angle);
+    const y1 = cy - r1 * Math.cos(angle);
+    const x2 = cx + r2 * Math.sin(angle);
+    const y2 = cy - r2 * Math.cos(angle);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', isMajor ? 'rgba(200,169,110,0.6)' : 'rgba(255,255,255,0.1)');
+    line.setAttribute('stroke-width', isMajor ? '1.5' : '0.5');
+    svg.appendChild(line);
+  }
+
+  cardinals.forEach((label, i) => {
+    const angle = (i * 45) * Math.PI / 180;
+    const r = 97;
+    const x = cx + r * Math.sin(angle);
+    const y = cy - r * Math.cos(angle) + 4;
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', x); text.setAttribute('y', y);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('font-size', label.length === 1 ? '13' : '9');
+    text.setAttribute('font-family', 'DM Mono, monospace');
+    text.setAttribute('fill', label === 'N' ? '#c8a96e' : 'rgba(232,226,214,0.35)');
+    text.setAttribute('font-weight', label === 'N' ? '500' : '300');
+    text.textContent = label;
+    svg.appendChild(text);
+  });
+})();
+
+// ── State ─────────────────────────────────────────────────────────────────
+const MAX_HISTORY = 120;
+let port, reader, connected = false;
+let count = 0, minVal = Infinity, maxVal = -Infinity;
+const history = [];
+let continuousRotation = null;  // unbounded accumulated angle for smooth needle
+
+// ── Chart ─────────────────────────────────────────────────────────────────
+const histChart = new Chart(document.getElementById('history-canvas'), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{
+      data: [],
+      borderColor: 'rgba(200,169,110,0.8)',
+      backgroundColor: 'rgba(200,169,110,0.06)',
+      borderWidth: 1,
+      pointRadius: 0,
+      tension: 0.3,
+      fill: true
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { display: false },
+      y: {
+        min: 0, max: 360,
+        ticks: {
+          stepSize: 90,
+          font: { size: 10, family: 'DM Mono' },
+          color: 'rgba(232,226,214,0.3)',
+          callback: v => ['N','E','S','W','N'][v/90]
+        },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        border: { display: false }
+      }
+    }
+  }
+});
+
+// ── Cardinal helper ───────────────────────────────────────────────────────
+function toCardinal(h) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(h / 22.5) % 16];
+}
+
+// ── Update UI ─────────────────────────────────────────────────────────────
+function update(heading) {
+  const h = parseFloat(heading);
+  if (isNaN(h)) return;
+
+  // Needle — use continuous rotation to avoid the 0°/360° flip.
+  // On first reading, seed directly. After that, find the shortest angular
+  // delta (always in -180..+180) and accumulate it so CSS never jumps.
+  if (continuousRotation === null) {
+    continuousRotation = h;
+  } else {
+    let delta = h - (continuousRotation % 360);
+    if (delta > 180)  delta -= 360;
+    if (delta < -180) delta += 360;
+    continuousRotation += delta;
+  }
+  document.getElementById('needle-wrap').style.transform = `rotate(${-continuousRotation}deg)`;
+
+  // Number
+  document.getElementById('heading-number').innerHTML =
+    `${h.toFixed(1)}<span class="heading-deg">°</span>`;
+  const card = toCardinal(h);
+  document.getElementById('heading-cardinal').innerHTML =
+    `<span>${card}</span>`;
+
+  // Stats
+  count++;
+  if (h < minVal) minVal = h;
+  if (h > maxVal) maxVal = h;
+  document.getElementById('stat-min').textContent = minVal.toFixed(1) + '°';
+  document.getElementById('stat-max').textContent = maxVal.toFixed(1) + '°';
+  document.getElementById('stat-count').textContent = count;
+
+  // History chart
+  history.push(h);
+  if (history.length > MAX_HISTORY) history.shift();
+  histChart.data.labels = history.map((_, i) => i);
+  histChart.data.datasets[0].data = history;
+  histChart.update();
+
+  // Log
+  const log = document.getElementById('log');
+  if (log.querySelector('span')) log.innerHTML = '';
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="ts">${new Date().toLocaleTimeString()}</span><span class="val">${h.toFixed(2)}°</span> ${card}`;
+  log.insertBefore(entry, log.firstChild);
+  if (log.children.length > 80) log.removeChild(log.lastChild);
+}
+
+// ── Serial ────────────────────────────────────────────────────────────────
+function setStatus(state, label) {
+  connected = state;
+  const dot = document.getElementById('dot');
+  dot.className = 'dot' + (state ? ' live' : state === null ? ' error' : '');
+  document.getElementById('status-text').textContent = label;
+  document.getElementById('connect-btn').textContent =
+    state ? '⊗ Disconnect' : '⊕ Connect to micro:bit';
+}
+
+async function startReading() {
+  const decoder = new TextDecoderStream();
+  port.readable.pipeTo(decoder.writable);
+  const stream = decoder.readable;
+  reader = stream.getReader();
+  let buffer = '';
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += value;
+      let nl;
+      while ((nl = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, nl).trim();
+        buffer = buffer.slice(nl + 1);
+        if (line) update(line);
+      }
+    }
+  } catch (e) {
+    if (connected) setStatus(null, 'stream error');
+  }
+}
+
+document.getElementById('connect-btn').addEventListener('click', async () => {
+  if (connected) {
+    try { if (reader) await reader.cancel(); if (port) await port.close(); } catch {}
+    setStatus(false, 'disconnected');
+    return;
+  }
+  if (!('serial' in navigator)) {
+    setStatus(null, 'web serial not supported — use chrome/edge');
+    return;
+  }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    setStatus(true, 'live');
+    startReading();
+  } catch (e) {
+    setStatus(null, e.message.toLowerCase());
+  }
+});
+</script>
+</body>
+</html>

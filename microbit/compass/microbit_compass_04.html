@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>micro:bit Compass</title>
+</head>
+<body>
+<button id="btn">Connect</button>
+<span id="status"> disconnected</span><br><br>
+<canvas id="c" width="300" height="300"></canvas>
+<p id="deg">—</p>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let continuous = null;
+
+function draw(angle) {
+
+  const cx = 150, cy = 150, r = 130;
+
+  ctx.clearRect(0, 0, 300, 300);
+
+  // Circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  // Cardinal labels
+  ['N','E','S','W'].forEach((l, i) => {
+    const a = i * Math.PI / 2;
+    ctx.fillText(l, cx + (r - 15) * Math.sin(a) - 4, cy - (r - 15) * Math.cos(a) + 5);
+  });
+
+  // Needle
+  const rad = angle * Math.PI / 180;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rad);
+  
+  ctx.beginPath();
+  ctx.moveTo(0, -r + 20);
+  ctx.lineTo(6, 0);
+  ctx.lineTo(-6, 0);
+  ctx.closePath();
+  ctx.fillStyle = 'red';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0, r - 20);
+  ctx.lineTo(6, -0);
+  ctx.lineTo(-6, -0);
+  ctx.closePath();
+  ctx.fillStyle = '#aaa';
+  ctx.fill();
+  ctx.restore();
+}
+
+draw(0);
+
+function update(h) {
+  draw(h);
+  document.getElementById('deg').textContent = h.toFixed(1) + '°  ' +
+    ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(h / 22.5) % 16];
+}
+
+async function openSerialPort() {
+  if (!navigator.serial) return alert('Use Chrome or Edge');
+  const port = await navigator.serial.requestPort();
+  await port.open({ baudRate: 115200 });
+  document.getElementById('status').textContent = ' connected';
+  const reader = port.readable.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += value;
+    let nl;
+    while ((nl = buf.indexOf('\n')) !== -1) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      const h = parseFloat(line);
+      if (!isNaN(h)) update(h);
+    }
+  }
+}
+
+document.getElementById('btn').addEventListener('click', async () => openSerialPort());
+</script>
+</body>
+</html>
