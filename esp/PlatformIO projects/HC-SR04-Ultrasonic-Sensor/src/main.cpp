@@ -22,7 +22,7 @@ void setup() {
 
 void loop() {
   
-  // Reset low pulse before triggering
+  // Set trigger pin to low before triggering
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
 
