@@ -10,7 +10,7 @@ float yAxisNormalized = 0.0f;
 char buffer[64];
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(buttonPin, INPUT_PULLUP);
   pinMode(xAxisPin, INPUT);
   pinMode(yAxisPin, INPUT);
@@ -20,11 +20,14 @@ void setup() {
 void loop() {
   buttonState = !digitalRead(buttonPin);
   xAxisState = analogRead(xAxisPin);
-  yAxisState = analogRead(-yAxisPin);
+  yAxisState = analogRead(yAxisPin);
 
-  xAxisNormalized = float(xAxisState);
+  // map [0, 4095] -> [-1, 1]
+  xAxisNormalized = (xAxisState / (float)4095) * 2.0f - 1.0f;
+  yAxisNormalized = -((yAxisState / (float)4095) * 2.0f - 1.0f);
 
-  dtostrf (buffer, "buttonState: %d, xAxisState: %c, yAxisState: %d", buttonState, xAxisNormalized, yAxisNormalized);
+  sprintf(buffer, "b: %d, x: %.3f, y: %.3f", buttonState, xAxisNormalized, yAxisNormalized);
   Serial.println(buffer);
+  // 100 fps
   delay(10);
 }

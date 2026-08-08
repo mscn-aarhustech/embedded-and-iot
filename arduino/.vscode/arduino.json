@@ -1,0 +1,6 @@
+{
+    "port": "COM29",
+    "board": "arduino:renesas_uno:unor4wifi",
+    "programmer": "rfp",
+    "sketch": "ArduinoUnoR4-WiFi-ISS\\ArduinoUnoR4-WiFi-ISS.ino"
+}
