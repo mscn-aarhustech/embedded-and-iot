@@ -9,6 +9,18 @@ float xAxisNormalized = 0.0f;
 float yAxisNormalized = 0.0f;
 char buffer[64];
 
+class TestClass {
+  public:
+
+    void testMethod() {
+      Serial.print("Hello, World!");
+    }
+    int testInt;
+    char testString[128];
+};
+
+TestClass test;
+
 void setup() {
   Serial.begin(115200);
   pinMode(buttonPin, INPUT_PULLUP);
@@ -28,6 +40,7 @@ void loop() {
 
   sprintf(buffer, "b: %d, x: %.3f, y: %.3f", buttonState, xAxisNormalized, yAxisNormalized);
   Serial.println(buffer);
+  
   // 100 fps
   delay(10);
 }

@@ -3,7 +3,7 @@
 #define TX_PIN 3
 #define RX_PIN 4
 
-SoftwareSerial mySerial(RX_PIN, TX_PIN); // RX, TX
+SoftwareSerial mySerial(RX_PIN, TX_PIN);
 
 void setup() {
   mySerial.begin(9600);

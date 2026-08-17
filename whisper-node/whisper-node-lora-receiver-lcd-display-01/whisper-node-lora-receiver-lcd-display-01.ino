@@ -1,28 +1,24 @@
 #include <SPI.h>
 #include <RH_RF95.h>
-#include "ArduinoGraphics.h"
-#include "Arduino_LED_Matrix.h"
+#include <DIYables_LCD_I2C.h>
 
 /*
 
 */
 
 // Pinout for Arduino Uno
-#define RFM95_CS   4
-#define RFM95_RST  2
-#define RFM95_INT  3
+#define RFM95_CS   10  // NSS (chip select)
+#define RFM95_RST  7   // RESET
+#define RFM95_INT  2   // DIO0, tied to INT0
 
 // Radio Config
 #define RF95_FREQ 433.0 // MUST MATCH TRANSMITTER
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
-// LED matrix
-ArduinoLEDMatrix matrix;
+// LCD display config
+DIYables_LCD_I2C lcd(0x27, 20, 4);
 
 void setup() {
-  matrix.begin();
-  matrix.textScrollSpeed(100);
-  matrix.textFont(Font_4x6);
 
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
@@ -58,6 +54,10 @@ void setup() {
   }
   
   Serial.println("Waiting for messages...");
+
+  // LCD
+  lcd.init();
+  lcd.backlight();
 }
 
 void loop() {
@@ -70,7 +70,7 @@ void loop() {
       buf[len] = '\0';
       
       // Serial
-      Serial.print("Got message: ");
+      Serial.print("Message: ");
       Serial.println((char*)buf);
       Serial.print("RSSI: ");
       Serial.println(rf95.lastRssi(), DEC);
@@ -78,15 +78,18 @@ void loop() {
       Serial.println(rf95.lastSNR(), DEC);
       Serial.println("--------------------------------");
 
-      // LED matrix
-      matrix.beginText(0, 1, 0xFFFFFF);
-      matrix.print("   ");
-      matrix.print((char*)buf);
-      matrix.print(" ");
-      matrix.print(rf95.lastRssi(), DEC);
-      matrix.print(" ");
-      matrix.print(rf95.lastSNR(), DEC);
-      matrix.endText(SCROLL_LEFT);
+      // LCD display
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("MSG  : ");
+      lcd.print((char*)buf);
+      lcd.setCursor(0, 1);
+      lcd.print("RSSI : ");
+      lcd.print(rf95.lastRssi(), DEC);
+      lcd.setCursor(0, 2);
+      lcd.print("SNR  : ");
+      lcd.print(rf95.lastSNR(), DEC);
+
     } else {
       Serial.println("Receive failed");
     }

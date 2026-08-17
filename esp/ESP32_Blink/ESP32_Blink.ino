@@ -1,4 +1,4 @@
-int LED_BUILTIN = 2;
+#include <Arduino.h>
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);

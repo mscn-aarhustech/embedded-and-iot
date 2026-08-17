@@ -1,16 +1,32 @@
-// Define the pin for the built-in LED on the ESP32 Dev Module
-const int ledPin = 2;
+#include <Arduino.h>
 
-// the setup function runs once when you press reset or power the board
 void setup() {
-  // initialize the digital pin as an output.
-  pinMode(ledPin, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 }
 
-// the loop function runs over and over again forever
 void loop() {
-  digitalWrite(ledPin, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                  // wait for a second
-  digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);                  // wait for a second
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(1000);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(1000);
 }
+
+
+
+
+// // Define the pin for the built-in LED on the ESP32 Dev Module
+// const int ledPin = 2;
+
+// // the setup function runs once when you press reset or power the board
+// void setup() {
+//   // initialize the digital pin as an output.
+//   pinMode(ledPin, OUTPUT);
+// }
+
+// // the loop function runs over and over again forever
+// void loop() {
+//   digitalWrite(ledPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+//   delay(1000);                  // wait for a second
+//   digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
+//   delay(1000);                  // wait for a second
+// }
