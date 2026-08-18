@@ -22,7 +22,7 @@ void setup() {
 }
 
 void loop() {
-  
+
   // Set trigger pin to low before triggering
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
@@ -32,20 +32,13 @@ void loop() {
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
 
-  // Measure the duration of the Echo pulse in microseconds
+  // Measure echo pulse delay in microseconds
   long duration = pulseIn(ECHO_PIN, HIGH, 30000);
 
-  if (duration > 0) {  
-    // Calculate distance in cm 
-    // (speed of sound = 343 m/sec = 0.0343 cm/microsecond)
-    float distanceCm = (duration * 0.0343) / 2.0;
-
-    Serial.print("Distance: ");
-    Serial.print(distanceCm);
-    Serial.println(" cm ");
-  } else {
-    Serial.println("No echo received");
-  }
+  Serial.print("Duration: ");
+  Serial.print(duration);
+  Serial.println(" us ");
 
   delay(500);
 }
+
